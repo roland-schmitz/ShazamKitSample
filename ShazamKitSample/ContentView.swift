@@ -30,9 +30,7 @@ struct ContentView: View {
                 .textSelection(.enabled)
                 .frame(maxWidth: /*@START_MENU_TOKEN@*/.infinity/*@END_MENU_TOKEN@*/, alignment: .leading)
             }
-            
             Divider()
-            
             VStack(alignment: .leading, spacing: 10) {
                 Button("Prepare", systemImage: "record.circle") {
                     Task {
@@ -46,21 +44,9 @@ struct ContentView: View {
                 Button("Shazam Once", systemImage: "shazam.logo") {
                     Task {
                         clearResults()
-                        print("start matching")
-                        switch await shazamSession.result() {
-                        case .match(let match):
-                            print("match: ")
-                            print("- Title: \(match.mediaItems.first?.title ?? "-")")
-                            print("- Artist: \(match.mediaItems.first?.artist ?? "-")")
-                            lastResultDescription = "Match"
-                            lastMatch = match
-                        case .noMatch(_):
-                            print("no match")
-                            lastResultDescription = "No match"
-                        case .error(let error, _):
-                            print("error: \(error)")
-                            lastResultDescription = "Error: \(error.localizedDescription)"
-                        }
+                        print("start matching once")
+                        let result = await shazamSession.result()
+                        handleShazamResult(result)
                     }
                 }
                 .disabled(shazamSession.state == .matching)
@@ -68,22 +54,9 @@ struct ContentView: View {
                 Button("Shazam Nonstop", systemImage: "shazam.logo") {
                     Task {
                         clearResults()
-                        print("start matching")
+                        print("start matching nonstop")
                         for await result in shazamSession.results {
-                            switch result {
-                            case .match(let match):
-                                print("match: ")
-                                print("- Title: \(match.mediaItems.first?.title ?? "-")")
-                                print("- Artist: \(match.mediaItems.first?.artist ?? "-")")
-                                lastResultDescription = "Match"
-                                lastMatch = match
-                            case .noMatch(_):
-                                print("no match")
-                                lastResultDescription = "No match"
-                            case .error(let error, _):
-                                print("error: \(error)")
-                                lastResultDescription = "Error: \(error.localizedDescription)"
-                            }
+                            handleShazamResult(result)
                         }
                         print("stopped matching")
                     }
@@ -101,7 +74,25 @@ struct ContentView: View {
             shazamSession.cancel()
         }
     }
-    
+
+    @MainActor private func handleShazamResult(_ result: SHSession.Result) {
+        switch result {
+        case .match(let match):
+            print("match: ")
+            print("- Title: \(match.mediaItems.first?.title ?? "-")")
+            print("- Artist: \(match.mediaItems.first?.artist ?? "-")")
+            lastResultDescription = "Match"
+            lastMatch = match
+        case .noMatch(_):
+            print("no match")
+            lastResultDescription = "No match"
+        case .error(let error, _):
+            print("error: \(error)")
+            lastResultDescription = "Error: \(error.localizedDescription)"
+        }
+
+    }
+
     private func clearResults() {
         lastResultDescription = ""
         lastMatch = nil
